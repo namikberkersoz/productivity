@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Productivity</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#f6f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171614" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Productivity">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" type="image/png" href="./icon-192.png">
+<style>html{color-scheme:light}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<style>
+  /* Layout: sticky header + category tabs → goal-aware summary (daily/weekly progress) → add form → log list */
+  :root{
+    --bg:#f6f5f2;--surface:#ffffff;--surface-2:#eceae4;--fg:#1c1b19;--muted:#706c64;--line:#dcd9d1;
+    --accent:#c8502f;--accent-soft:#f0d9cf;--ring:rgba(200,80,47,.35);--track:#e4e1da;
+    --study:#c8502f;--work:#3a7d8c;--football:#2f7d4f;--ref:#b4883a;--volunteer:#4a6fa5;--sport:#7a4f9e;
+    --good:#2f7d4f;
+    --font-head:"Space Grotesk",system-ui,sans-serif;--font-body:"Inter",system-ui,sans-serif;
+    --radius:14px;--shadow:0 1px 2px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#171614;--surface:#211f1c;--surface-2:#2a2824;--fg:#efece6;--muted:#a39e94;--line:#38352f;
+      --accent:#e0714e;--accent-soft:#3a2a23;--ring:rgba(224,113,78,.4);--track:#332f2a;
+      --study:#e0714e;--work:#5fb0c2;--football:#58b07e;--ref:#d7a94f;--volunteer:#7fa3d6;--sport:#ac86cf;--good:#58b07e;
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#171614;--surface:#211f1c;--surface-2:#2a2824;--fg:#efece6;--muted:#a39e94;--line:#38352f;
+    --accent:#e0714e;--accent-soft:#3a2a23;--ring:rgba(224,113,78,.4);--track:#332f2a;
+    --study:#e0714e;--work:#5fb0c2;--football:#58b07e;--ref:#d7a94f;--volunteer:#7fa3d6;--sport:#ac86cf;--good:#58b07e;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+  body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:20;background:var(--surface)}
+  .wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+  header.app{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;background:var(--surface);border-bottom:1px solid var(--line)}
+  .head-row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-block:14px 10px}
+  h1{font-family:var(--font-head);font-size:1.35rem;font-weight:600;margin:0;letter-spacing:-.01em}
+  .today{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+  .theme-btn{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:5px 9px;font-size:.78rem;cursor:pointer;font-family:var(--font-body)}
+  .theme-btn:hover{color:var(--fg)}
+
+  .tabs{display:flex;gap:4px;overflow-x:auto;padding-block:0 10px;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;border:1px solid transparent;background:var(--surface-2);color:var(--muted);border-radius:999px;padding:7px 13px;font-size:.84rem;font-weight:500;cursor:pointer;white-space:nowrap;font-family:var(--font-body);display:flex;align-items:center;gap:6px}
+  .tab .dot{width:8px;height:8px;border-radius:50%;background:var(--cat,var(--accent))}
+  .tab[aria-selected="true"]{background:var(--surface);color:var(--fg);border-color:var(--line);box-shadow:var(--shadow)}
+
+  main{padding-block:16px 40px}
+
+  .summary{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:18px;box-shadow:var(--shadow)}
+  .cat-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px}
+  .cat-name{font-family:var(--font-head);font-weight:600;font-size:1.05rem;display:flex;align-items:center;gap:8px;margin:0}
+  .cat-name .dot{width:11px;height:11px;border-radius:50%;background:var(--cat)}
+  .goal-btn{background:var(--surface-2);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:5px 10px;font-size:.76rem;cursor:pointer;font-family:var(--font-body)}
+  .goal-btn:hover{color:var(--fg)}
+
+  .progress{display:flex;flex-direction:column;gap:12px;margin-bottom:14px}
+  .prog{display:flex;flex-direction:column;gap:5px}
+  .prog .plabel{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .prog .pname{font-size:.82rem;color:var(--muted);font-weight:500}
+  .prog .pval{font-size:.84rem;font-variant-numeric:tabular-nums}
+  .prog .pval b{font-family:var(--font-head);font-weight:600}
+  .prog .pval .done{color:var(--good);font-weight:600}
+  .bar{height:8px;background:var(--track);border-radius:999px;overflow:hidden}
+  .bar>span{display:block;height:100%;background:var(--cat);border-radius:999px;transition:width .3s ease;width:0}
+  .bar.is-done>span{background:var(--good)}
+  .noGoal{font-size:.8rem;color:var(--muted)}
+
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .stat{background:var(--surface-2);border-radius:10px;padding:11px 12px}
+  .stat .n{font-family:var(--font-head);font-size:1.4rem;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+  .stat .l{font-size:.72rem;color:var(--muted);margin-top:5px;text-transform:uppercase;letter-spacing:.04em}
+
+  .goal-edit{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end}
+  .goal-edit .field{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .goal-edit .save{grid-column:1 / -1;background:var(--cat);color:#fff;border:none;border-radius:9px;padding:9px;font-weight:600;cursor:pointer;font-family:var(--font-body)}
+
+  form.add{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:18px;box-shadow:var(--shadow)}
+  .form-title{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 11px}
+  .fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .field{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .field.wide{grid-column:1 / -1}
+  label{font-size:.76rem;color:var(--muted);font-weight:500}
+  input,select,textarea{font-family:var(--font-body);font-size:.92rem;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 10px;width:100%}
+  textarea{resize:vertical;min-height:40px}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--cat,var(--accent));box-shadow:0 0 0 3px var(--ring)}
+  .submit{grid-column:1 / -1;margin-top:3px;background:var(--cat,var(--accent));color:#fff;border:none;border-radius:9px;padding:11px;font-size:.92rem;font-weight:600;cursor:pointer;font-family:var(--font-body)}
+  .submit:hover{filter:brightness(1.05)}
+
+  .log-head{display:flex;align-items:baseline;justify-content:space-between;margin:0 2px 10px}
+  .log-head h2{font-family:var(--font-head);font-size:.95rem;font-weight:600;margin:0}
+  .log-head .count{font-size:.78rem;color:var(--muted)}
+
+  ul.log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .entry{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;gap:12px;align-items:flex-start}
+  .entry .ebar{width:3px;align-self:stretch;border-radius:2px;background:var(--cat);flex:0 0 auto}
+  .entry .ebody{flex:1;min-width:0}
+  .entry .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .entry .title{font-weight:600;font-size:.95rem}
+  .entry .amt{font-family:var(--font-head);font-weight:600;font-size:.95rem;color:var(--cat);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .entry .meta{font-size:.78rem;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+  .entry .note{font-size:.85rem;color:var(--fg);margin-top:6px;white-space:pre-wrap;word-break:break-word}
+  .entry .del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:2px 4px;border-radius:6px;flex:0 0 auto}
+  .entry .del:hover{color:var(--accent);background:var(--surface-2)}
+
+  .empty{text-align:center;color:var(--muted);padding:28px 16px;border:1px dashed var(--line);border-radius:12px;font-size:.88rem}
+
+  .calcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:18px;box-shadow:var(--shadow)}
+  .cal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+  .cal-title{font-family:var(--font-head);font-weight:600;font-size:.98rem;display:flex;align-items:center;gap:8px;min-width:0}
+  .cal-title .dot{width:10px;height:10px;border-radius:50%;background:var(--cat);flex:0 0 auto}
+  .cal-nav{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+  .cal-nav button{background:var(--surface-2);border:1px solid var(--line);color:var(--fg);border-radius:8px;width:30px;height:30px;font-size:1.05rem;cursor:pointer;line-height:1;font-family:var(--font-body)}
+  .cal-nav button:hover{border-color:var(--cat)}
+  .cal-month{font-size:.82rem;color:var(--muted);min-width:8.5em;text-align:center;font-variant-numeric:tabular-nums}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .cal-dow{font-size:.64rem;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);text-align:center;padding-bottom:2px}
+  .cal-cell{aspect-ratio:1/1;border-radius:9px;background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;min-width:0}
+  .cal-cell.blank{background:transparent}
+  .cal-cell .d{font-size:.7rem;color:var(--muted);font-variant-numeric:tabular-nums;line-height:1.1}
+  .cal-cell .mk{font-size:.9rem;line-height:1;height:1em}
+  .cal-cell.done{background:color-mix(in srgb,var(--good) 18%,var(--surface-2))}
+  .cal-cell.done .mk{color:var(--good)}
+  .cal-cell.miss{background:color-mix(in srgb,var(--accent) 13%,var(--surface-2))}
+  .cal-cell.miss .mk{color:var(--accent)}
+  .cal-cell.today{outline:2px solid var(--cat);outline-offset:-2px}
+  .cal-legend{display:flex;gap:14px;margin-top:12px;font-size:.74rem;color:var(--muted);flex-wrap:wrap}
+  .cal-legend span{display:flex;align-items:center;gap:5px}
+</style>
+
+<header class="app">
+  <div class="wrap">
+    <div class="head-row">
+      <h1>Productivity</h1>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="today" id="today"></span>
+        <button class="theme-btn" id="themeBtn" type="button">Theme</button>
+      </div>
+    </div>
+    <div class="tabs" id="tabs" role="tablist"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="summary" id="summary"></section>
+  <section class="calcard" id="calcard"></section>
+  <form class="add" id="addForm"></form>
+  <div class="log-head">
+    <h2 id="logTitle">Entries</h2>
+    <span class="count" id="logCount"></span>
+  </div>
+  <ul class="log" id="log"></ul>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var KEY="productivity.v1";
+
+  var CATS=[
+    {id:"study",     label:"Study",       cat:"var(--study)",     unit:"min",     amtLabel:"Duration (min)",   step:5,  title:"Subject / Course", titlePh:"Databases, Math…", dg:120, wg:600},
+    {id:"work",      label:"Work",        cat:"var(--work)",      unit:"h",       amtLabel:"Duration (h)",     step:0.5,title:"Task / Shift",     titlePh:"Shift, Project…", hasFee:true, feeLabel:"Earnings (€, optional)", dg:0, wg:15},
+    {id:"football",  label:"Football",    cat:"var(--football)",  unit:"min",     amtLabel:"Duration (min)",   step:5,  title:"Training / Match", titlePh:"Training, League match…", dg:0, wg:180},
+    {id:"refereeing",label:"Refereeing",  cat:"var(--ref)",       unit:"matches", amtLabel:"Matches",          step:1,  title:"Fixture",          titlePh:"U15 League, Friendly…", hasFee:true, feeLabel:"Fee (€, optional)", dg:0, wg:2},
+    {id:"volunteer", label:"Volunteering",cat:"var(--volunteer)", unit:"h",       amtLabel:"Duration (h)",     step:0.5,title:"Activity",         titlePh:"Club work, Tutoring…", dg:0, wg:3},
+    {id:"sport",     label:"Sport",       cat:"var(--sport)",     unit:"min",     amtLabel:"Duration (min)",   step:5,  title:"Activity",         titlePh:"Gym, Running, Swimming…", dg:30, wg:150}
+  ];
+  function catOf(id){for(var i=0;i<CATS.length;i++)if(CATS[i].id===id)return CATS[i];return CATS[0];}
+
+  var data=load();
+  var active=CATS[0].id;
+  var goalOpen=false;
+  var calY,calM;(function(){var n=new Date();calY=n.getFullYear();calM=n.getMonth();})();
+
+  function load(){
+    try{var r=localStorage.getItem(KEY);if(r){var p=JSON.parse(r);if(p&&p.entries){if(!p.goals)p.goals={};return p;}}}catch(e){}
+    var g={};CATS.forEach(function(c){g[c.id]={daily:c.dg||0,weekly:c.wg||0};});
+    return {entries:{},goals:g};
+  }
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(data));}catch(e){}}
+  function entriesFor(id){return (data.entries[id]||[]).slice();}
+  function goalFor(id){var g=data.goals&&data.goals[id];var c=catOf(id);return {daily:g?g.daily:(c.dg||0),weekly:g?g.weekly:(c.wg||0)};}
+
+  function todayISO(){var d=new Date();var off=d.getTimezoneOffset();var l=new Date(d.getTime()-off*60000);return l.toISOString().slice(0,10);}
+  function fmtDate(iso){try{var d=new Date(iso+"T00:00:00");return d.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});}catch(e){return iso;}}
+  function startOfWeek(d){var x=new Date(d);var day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);x.setHours(0,0,0,0);return x;}
+  function inThisWeek(iso){var d=new Date(iso+"T00:00:00");var s=startOfWeek(new Date());var e=new Date(s);e.setDate(e.getDate()+7);return d>=s&&d<e;}
+  function isToday(iso){return iso===todayISO();}
+  function fmtNum(n){if(n%1===0)return String(n);return n.toFixed(1).replace(/\.0$/,"");}
+  function pad(n){return (n<10?"0":"")+n;}
+
+  var tabsEl=document.getElementById("tabs");
+  function renderTabs(){
+    tabsEl.innerHTML="";
+    CATS.forEach(function(c){
+      var b=document.createElement("button");
+      b.className="tab";b.type="button";b.setAttribute("role","tab");
+      b.setAttribute("aria-selected",c.id===active?"true":"false");
+      b.style.setProperty("--cat",c.cat);
+      b.innerHTML='<span class="dot"></span>'+c.label;
+      b.onclick=function(){active=c.id;goalOpen=false;var n=new Date();calY=n.getFullYear();calM=n.getMonth();renderAll();};
+      tabsEl.appendChild(b);
+    });
+  }
+
+  function progRow(name,val,goal,unit){
+    if(!goal||goal<=0){
+      return '<div class="prog"><div class="plabel"><span class="pname">'+name+'</span>'+
+             '<span class="pval"><b>'+fmtNum(val)+'</b> '+unit+' <span class="noGoal">· no goal</span></span></div></div>';
+    }
+    var pct=Math.min(100,Math.round(val/goal*100));
+    var done=val>=goal;
+    return '<div class="prog"><div class="plabel"><span class="pname">'+name+'</span>'+
+           '<span class="pval"><b>'+fmtNum(val)+'</b> / '+fmtNum(goal)+' '+unit+' '+
+           (done?'<span class="done">✓</span>':'<span class="noGoal">'+pct+'%</span>')+'</span></div>'+
+           '<div class="bar'+(done?' is-done':'')+'"><span style="width:'+pct+'%"></span></div></div>';
+  }
+
+  function renderSummary(){
+    var c=catOf(active);var list=entriesFor(active);var g=goalFor(active);
+    var total=0,week=0,day=0,fee=0;
+    list.forEach(function(e){
+      total+=e.amt;
+      if(inThisWeek(e.date))week+=e.amt;
+      if(isToday(e.date))day+=e.amt;
+      if(e.fee)fee+=e.fee;
+    });
+    var el=document.getElementById("summary");
+    el.style.setProperty("--cat",c.cat);
+
+    var tiles='<div class="stat"><div class="n">'+fmtNum(total)+'</div><div class="l">Total ('+c.unit+')</div></div>';
+    if(c.hasFee)tiles+='<div class="stat"><div class="n">'+fmtNum(fee)+'<span style="font-size:.9rem"> €</span></div><div class="l">Earnings</div></div>';
+    else tiles+='<div class="stat"><div class="n">'+list.length+'</div><div class="l">Entries</div></div>';
+
+    var editHtml="";
+    if(goalOpen){
+      editHtml='<div class="goal-edit">'+
+        '<div class="field"><label for="g-daily">Daily goal ('+c.unit+')</label><input id="g-daily" type="number" min="0" step="'+c.step+'" inputmode="decimal" value="'+(g.daily||"")+'" placeholder="0"></div>'+
+        '<div class="field"><label for="g-weekly">Weekly goal ('+c.unit+')</label><input id="g-weekly" type="number" min="0" step="'+c.step+'" inputmode="decimal" value="'+(g.weekly||"")+'" placeholder="0"></div>'+
+        '<button class="save" type="button" id="g-save">Save goals</button></div>';
+    }
+
+    el.innerHTML=
+      '<div class="cat-row"><div class="cat-name"><span class="dot"></span>'+c.label+'</div>'+
+      '<button class="goal-btn" type="button" id="goalToggle">'+(goalOpen?'Close':'Goals')+'</button></div>'+
+      '<div class="progress">'+progRow("Today",day,g.daily,c.unit)+progRow("This week",week,g.weekly,c.unit)+'</div>'+
+      '<div class="stats">'+tiles+'</div>'+editHtml;
+
+    document.getElementById("goalToggle").onclick=function(){goalOpen=!goalOpen;renderSummary();};
+    if(goalOpen){
+      document.getElementById("g-save").onclick=function(){
+        var d=parseFloat(document.getElementById("g-daily").value);
+        var w=parseFloat(document.getElementById("g-weekly").value);
+        if(isNaN(d)||d<0)d=0;if(isNaN(w)||w<0)w=0;
+        if(!data.goals)data.goals={};
+        data.goals[active]={daily:d,weekly:w};
+        save();goalOpen=false;renderSummary();renderCalendar();
+      };
+    }
+  }
+
+  function renderForm(){
+    var c=catOf(active);
+    var f=document.getElementById("addForm");
+    f.style.setProperty("--cat",c.cat);
+    var html='<div class="form-title">Add new entry</div><div class="fields">';
+    html+='<div class="field wide"><label for="f-title">'+c.title+'</label><input id="f-title" type="text" placeholder="'+c.titlePh+'" autocomplete="off"></div>';
+    html+='<div class="field"><label for="f-amt">'+c.amtLabel+'</label><input id="f-amt" type="number" min="0" step="'+c.step+'" inputmode="decimal" placeholder="0"></div>';
+    html+='<div class="field"><label for="f-date">Date</label><input id="f-date" type="date" value="'+todayISO()+'"></div>';
+    if(c.hasFee)html+='<div class="field"><label for="f-fee">'+(c.feeLabel||"Fee (€, optional)")+'</label><input id="f-fee" type="number" min="0" step="0.5" inputmode="decimal" placeholder="0"></div>';
+    html+='<div class="field wide"><label for="f-note">Note (optional)</label><textarea id="f-note" placeholder="…"></textarea></div>';
+    html+='<button class="submit" type="submit">Add</button></div>';
+    f.innerHTML=html;
+  }
+
+  function renderLog(){
+    var c=catOf(active);
+    var list=entriesFor(active).sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:(b.ts||0)-(a.ts||0);});
+    document.getElementById("logTitle").textContent=c.label+" entries";
+    document.getElementById("logCount").textContent=list.length?list.length+(list.length===1?" entry":" entries"):"";
+    var ul=document.getElementById("log");ul.innerHTML="";
+    if(!list.length){
+      var li0=document.createElement("li");
+      li0.innerHTML='<div class="empty">No entries yet. Add your first '+c.label.toLowerCase()+' entry above.</div>';
+      ul.appendChild(li0);return;
+    }
+    list.forEach(function(e){
+      var li=document.createElement("li");li.className="entry";li.style.setProperty("--cat",c.cat);
+      var meta=fmtDate(e.date);if(e.fee)meta+=" · "+fmtNum(e.fee)+" €";
+      var amt=fmtNum(e.amt)+" "+c.unit;
+      li.innerHTML='<span class="ebar"></span><div class="ebody"><div class="top"><span class="title"></span><span class="amt">'+amt+'</span></div><div class="meta">'+meta+'</div>'+(e.note?'<div class="note"></div>':'')+'</div><button class="del" type="button" title="Delete" aria-label="Delete">✕</button>';
+      li.querySelector(".title").textContent=e.title||c.label;
+      if(e.note)li.querySelector(".note").textContent=e.note;
+      li.querySelector(".del").onclick=function(){removeEntry(e.id);};
+      ul.appendChild(li);
+    });
+  }
+
+  function renderCalendar(){
+    var c=catOf(active);var g=goalFor(active);var dg=g.daily;
+    var el=document.getElementById("calcard");el.style.setProperty("--cat",c.cat);
+    var list=entriesFor(active);
+    var totals={},earliest=null;
+    list.forEach(function(e){totals[e.date]=(totals[e.date]||0)+e.amt;if(!earliest||e.date<earliest)earliest=e.date;});
+    var today=todayISO();
+    var first=new Date(calY,calM,1);
+    var startDow=(first.getDay()+6)%7;
+    var dim=new Date(calY,calM+1,0).getDate();
+    var monthLabel=first.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+    var dows=["Mo","Tu","We","Th","Fr","Sa","Su"];
+    var h='<div class="cal-head"><div class="cal-title"><span class="dot"></span>'+c.label+'</div>'+
+      '<div class="cal-nav"><button type="button" id="calPrev" aria-label="Previous month">‹</button>'+
+      '<span class="cal-month">'+monthLabel+'</span>'+
+      '<button type="button" id="calNext" aria-label="Next month">›</button></div></div>';
+    h+='<div class="cal-grid">';
+    dows.forEach(function(d){h+='<div class="cal-dow">'+d+'</div>';});
+    for(var i=0;i<startDow;i++)h+='<div class="cal-cell blank"></div>';
+    for(var day=1;day<=dim;day++){
+      var iso=calY+"-"+pad(calM+1)+"-"+pad(day);
+      var tot=totals[iso]||0;
+      var cls="cal-cell",mk="";
+      if(dg>0){
+        if(tot>=dg){cls+=" done";mk="✓";}
+        else if(earliest&&iso>=earliest&&iso<=today){cls+=" miss";mk="✗";}
+      }else{
+        if(tot>0){cls+=" done";mk="✓";}
+      }
+      if(iso===today)cls+=" today";
+      h+='<div class="'+cls+'"><span class="d">'+day+'</span><span class="mk">'+mk+'</span></div>';
+    }
+    h+='</div>';
+    h+='<div class="cal-legend"><span><span style="color:var(--good)">✓</span> '+(dg>0?'goal reached':'active day')+'</span>'+
+       (dg>0?'<span><span style="color:var(--accent)">✗</span> goal missed</span>':'')+'</div>';
+    el.innerHTML=h;
+    document.getElementById("calPrev").onclick=function(){calM--;if(calM<0){calM=11;calY--;}renderCalendar();};
+    document.getElementById("calNext").onclick=function(){calM++;if(calM>11){calM=0;calY++;}renderCalendar();};
+  }
+
+  function renderAll(){renderTabs();renderSummary();renderCalendar();renderForm();renderLog();}
+
+  function addEntry(ev){
+    ev.preventDefault();
+    var c=catOf(active);
+    var title=(document.getElementById("f-title").value||"").trim();
+    var amt=parseFloat(document.getElementById("f-amt").value);
+    var date=document.getElementById("f-date").value||todayISO();
+    var note=(document.getElementById("f-note").value||"").trim();
+    var feeEl=document.getElementById("f-fee");
+    var fee=feeEl?parseFloat(feeEl.value):0;
+    if(isNaN(amt)||amt<0)amt=0;if(isNaN(fee)||fee<0)fee=0;
+    if(!title&&amt===0&&!note){document.getElementById("f-title").focus();return;}
+    var e={id:"e"+Date.now()+Math.random().toString(36).slice(2,6),title:title,amt:amt,date:date,note:note,ts:Date.now()};
+    if(c.hasFee)e.fee=fee;
+    if(!data.entries[active])data.entries[active]=[];
+    data.entries[active].push(e);
+    save();renderSummary();renderCalendar();renderLog();
+    document.getElementById("addForm").reset();
+    document.getElementById("f-date").value=todayISO();
+    document.getElementById("f-title").focus();
+  }
+  function removeEntry(id){
+    var list=data.entries[active]||[];
+    data.entries[active]=list.filter(function(e){return e.id!==id;});
+    save();renderSummary();renderCalendar();renderLog();
+  }
+  document.getElementById("addForm").addEventListener("submit",addEntry);
+
+  var themeBtn=document.getElementById("themeBtn");
+  (function(){try{var t=localStorage.getItem(KEY+".theme");if(t)document.documentElement.setAttribute("data-theme",t);}catch(e){}})();
+  themeBtn.onclick=function(){
+    var cur=document.documentElement.getAttribute("data-theme");
+    var mqDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme:dark)").matches;
+    var next=cur?(cur==="dark"?"light":"dark"):(mqDark?"light":"dark");
+    document.documentElement.setAttribute("data-theme",next);
+    try{localStorage.setItem(KEY+".theme",next);}catch(e){}
+  };
+
+  document.getElementById("today").textContent=new Date().toLocaleDateString("en-GB",{weekday:"short",day:"2-digit",month:"short"});
+  renderAll();
+})();
+</script>
+
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){});});}</script>
+</body>
+</html>
